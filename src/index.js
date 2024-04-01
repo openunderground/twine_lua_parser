@@ -12,9 +12,6 @@ class Parser {
   constructor(twstory) {
     this.twstory = twstory;
     this.convertPassage = this.convertPassage.bind(this);
-    this.parseResponse = this.parseResponse.bind(this);
-
-    console.log(this.toJSON());
   }
 
   toJSON() {
