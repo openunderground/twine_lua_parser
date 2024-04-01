@@ -93,7 +93,7 @@ class Parser {
 
     const { name, pid, tags } = this.attrsToObject(passage.attributes)
     return {
-      ...linesConverted,
+      ...converted,
       tags: tags.split(" ").filter(Boolean),
       name,
       pid,
