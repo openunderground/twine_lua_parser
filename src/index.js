@@ -25,7 +25,7 @@ class Parser {
 
     const passages = {}
     convertedPassages.forEach((row) => {
-      passages[row.name] = { ...row, name: undefined, pid: undefined };
+      passages[row.name] = { ...row };
     });
 
     return {
@@ -37,7 +37,7 @@ class Parser {
 
   convertPassage(passage) {
     const converted = passage.innerHTML.split("\n")
-      .map(line => this.decodeHtmlEntities(line).trim())
+      .map(line => this.decodeHTMLEntities(line).trim())
       .filter(Boolean)
       .reduce((acc, lineRaw) => {
 
