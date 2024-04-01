@@ -40,16 +40,17 @@ class Parser {
       .map(line => this.decodeHTMLEntities(line).trim())
       .filter(Boolean)
       .reduce((acc, lineRaw) => {
+        let workingLine = (' ' + lineRaw).slice(1); // force line position past minifier
 
         // Props are expected to be on a line by themselves
-        const propsMatch = lineRaw.match(RegEx.EXTRACT_PROPS);
+        const propsMatch = workingLine.match(RegEx.EXTRACT_PROPS);
         if (propsMatch) {
           acc.props = this.getProp(propsMatch, acc.props)
           return acc;
         }
 
         const entry = {}
-        let workingLine = lineRaw;
+
 
         // Dialogue and Response lines may have conditional and emotions
         // conditional and emotions must be at the start of the line
