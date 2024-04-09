@@ -154,7 +154,7 @@ class Parser {
 
       const valueType = typeof value;
 
-      if (valueType == "number" || valueType == "number")
+      if (valueType == "number" || valueType == "boolean")
         return value.toString();
 
       if (valueType == "string")

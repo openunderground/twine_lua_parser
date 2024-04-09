@@ -4,7 +4,206 @@
 <head>
   <title>Untitled Story</title>
   <script type="text/javascript">
-    var{keys:a}=Object,{isArray:b}=Array,c=/\?\((?:(\w+)\.)?(\w+)\s*(==|<|>)\s*["']?([^"'\s]+)["']?\)/,d=/\$(?:(\w+)\.)?(\w+)\s*=\s*("[^"]+"|'[^']+'|\b\w+\b|\d+)/,e=/\{\{.+?\}\}/g,f=_=>_.replaceAll('&lt;','<').replaceAll('&gt;','>'),g=B=>{const C=typeof B;if(B==null)return null;if(b(B)){const _a=B.map(g).join(', ');return`{${_a}}`}switch(C) {case 'number':case 'boolean':return`${B}`;case 'string':return JSON.stringify(B);case 'object':{const D=Object.entries(B).map(([_A,_b])=>`${_A} = ${g(_b)}`).join(', ');return`{${D}}`}default:throw Error(`Unsupported data type: ${C}`)}},h=E=>`return ${g(E)}`,A=aA=>{const _B=aA.match(c);if(!_B)return;let[,_c,_d,_e,F]=_B;switch(_e) {case '==':_e='eq';break;case '>':_e='gt';break;case '<':_e='lt';break}try {F=JSON.parse(F)} catch {}return{varName:_d,category:_c??'checks',comparator:_e,value:F}},j=({unparsedText:aB,emotion:aC})=>{const _C=aB.replace(/^!*\[\[|\]\]!*$/g,''),_D=_C.split('|'),_E={},_f=A(_D[0]);_D.length==1&&(_E.link=_D[0]);_f&&(_E.condition=_f);if(_D.length==2){_E.link=_D[1];!_f&&(_E.text=_D[0])}else _D.length==3&&(_E.link=_D[2],_E.text=_D[1]);_E.text?.startsWith('---')&&(_E.isEnd=!0,_E.text=_E.text.replace(/^---/,''),!_E.text&&delete _E.text);aB.startsWith('!')&&aB.endsWith('!')&&(_E.isUrgent=!0);aC&&(_E.emotion=aC);return _E},k=aD=>{const aE=[];for(let i=aD.length-1;i>=0;i--){const aF=aD[i],aG=aF.match(/!*\[\[.+?\]\]!*/g),aH=aF.match(e);if(aG){const aI={unparsedText:aG[0]};aH&&(aI.emotion=aH[0].replace(/^\{\{|\}\}$/g,''));aE.unshift(aI);aD.splice(i,1)}}if(!aE.length)return;return aE.map(j).sort(aJ=>aJ.isUrgent?1:0)},l=aK=>{const aL=[];for(let i=aK.length-1;i>=0;i--){const aM=aK[i],aN=aM.match(d);if(aN){const[,aO,aP,aQ]=aN,aR={varName:aP,category:aO??'checks'};try {aR.value=JSON.parse(aQ)} catch {aR.value=aQ}aL.push(aR);aK.splice(i,1)}}return a(aL).length>0?aL:null},m=aS=>aS.map(aT=>f(aT).trim()).filter(aU=>!!aU),n=aV=>{const aW={text:aV.replace(c,'').replace(e,'')},aX=A(aV),aY=aV.match(e);aX&&(aW.condition=aX);aY&&(aW.emotion=aY[0].replace(/^\{\{|\}\}$/g,''));return aW},o=aZ=>{const bA=m(aZ.innerHTML.split('\n')),bB={},bC=k(bA),bD=l(bA);bC&&(bB.responses=bC.filter(bE=>!!bE.text),bB.redirects=bC.filter(bF=>!bF.text),!bB.responses.length&&delete bB.responses,!bB.redirects.length&&delete bB.redirects);bD&&(bB.props=bD);for(const bG of ['name','tags','pid']){const bH=aZ.attributes[bG].value;bH&&(bB[bG]=bH)}bB.tags&&(bB.tags=bB.tags.split(' '));bB.lines=m(bA).map(n);return bB},p=bI=>{const bJ=Array.prototype.slice.call(bI.getElementsByTagName('tw-passagedata')).map(o),bK={passages:{},name:bI.attributes.name.value,start_node_name:bJ.find(bL=>bL.pid==bI.attributes.startnode.value).name};for(const bM of bJ)bK.passages[bM.name]={...bM,name:void 0, pid:void 0};return JSON.parse(JSON.stringify(bK))};window.parseTwineToLua=()=>document.getElementById('output').innerHTML=h(p(document.getElementsByTagName('tw-storydata')[0]));
+    const RegEx = {
+  EXTRACT_PROPS: /\$(?:(\w+)\.)?(\w+)\s*=\s*("[^"]+"|'[^']+'|\b\w+\b|\d+)/,
+  EXTRACT_CONDITION: /\?\((?:(\w+)\.)?(\w+)\s*(==|<|>)\s*["']?([^"'\s]+)["']?\)/,
+  EXTRACT_EMOTION: /\{\{([\w, +]+)\}\}/,
+  IS_LINK: /^!*\[\[.+?\]\]!*$/g,
+  DOUBLE_SQUARE_BRACKETS: /^!*\[\[|\]\]!*$/g,
+}
+
+class Parser {
+  twstory;
+
+  constructor(twstory) {
+    this.twstory = twstory;
+    this.convertPassage = this.convertPassage.bind(this);
+  }
+
+  toJSON() {
+    console.log("Converting to Story //");
+    const { name, startnode: startNodeId } = this.attrsToObject(this.twstory.attributes)
+    const passagesNodes = this.twstory.getElementsByTagName("tw-passagedata");
+    const convertedPassages = [...passagesNodes].map(this.convertPassage);
+    const startNode = convertedPassages.find((passage) =>
+      passage.pid == startNodeId
+    )
+
+    const passages = {}
+    convertedPassages.forEach((row) => {
+      passages[row.name] = { ...row };
+    });
+
+    return {
+      name,
+      passages,
+      startNode: startNode.name,
+    };
+  }
+
+  convertPassage(passage) {
+    const converted = passage.innerHTML.split("\n")
+      .map(line => this.decodeHTMLEntities(line).trim())
+      .filter(Boolean)
+      .reduce((acc, lineRaw) => {
+        let workingLine = (' ' + lineRaw).slice(1); // force line position past minifier
+
+        // Props are expected to be on a line by themselves
+        const propsMatch = workingLine.match(RegEx.EXTRACT_PROPS);
+        if (propsMatch) {
+          acc.props = this.getProp(propsMatch, acc.props)
+          return acc;
+        }
+
+        const entry = {}
+
+
+        // Dialogue and Response lines may have conditional and emotions
+        // conditional and emotions must be at the start of the line
+        const condition = this.getCondition(workingLine);
+        if (condition) entry.condition = condition;
+        workingLine = workingLine.replace(RegEx.EXTRACT_CONDITION, "");
+
+        const emotions = workingLine.match(RegEx.EXTRACT_EMOTION);
+        if (emotions) entry.emotions = emotions[1].split(',').map(t => t.trim()).filter(Boolean);
+        workingLine = workingLine.replace(RegEx.EXTRACT_EMOTION, "");
+
+        const linkMatch = workingLine.match(RegEx.IS_LINK);
+        if (linkMatch) {
+          const linkContent = workingLine.replace(RegEx.DOUBLE_SQUARE_BRACKETS, "").split("|");
+          if (linkContent && linkContent.length == 1) {
+            entry.text = null;
+            entry.link = linkContent[0];
+            acc.redirects.push(entry);
+            return acc;
+          }
+          if (linkContent && linkContent.length == 2) {
+            const [text, link] = linkContent;
+            entry.text = linkContent[0];
+            entry.link = linkContent[1];
+            acc.responses.push(entry);
+            return acc;
+          }
+          // invalid, skip
+          return acc;
+        }
+
+        entry.text = workingLine;
+        acc.lines.push(entry);
+        return acc;
+      }, {
+        lines: [],
+        responses: [],
+        redirects: [],
+        props: {}
+      })
+
+    const { name, pid, tags } = this.attrsToObject(passage.attributes)
+    return {
+      ...converted,
+      tags: tags.split(" ").filter(Boolean),
+      name,
+      pid,
+    }
+  }
+
+  getProp(matchResult, props) {
+    const [_fullMatch, groupName, propName, value] = matchResult;
+
+    let typedValue
+    try {
+      typedValue = JSON.parse(value);
+    } catch (error) {
+      typedValue = value;
+    }
+
+    if (groupName) {
+      props[groupName] = props[groupName] || {};
+      props[groupName][propName] = typedValue;
+    }
+    else {
+      props[propName] = typedValue;
+    }
+    return props;
+  }
+
+  getCondition(text) {
+    const match = text.match(RegEx.EXTRACT_CONDITION);
+    if (!match) return null;
+
+    let [_, group, prop, comparator, value] = match;
+
+    switch (comparator) {
+      case "==": comparator = "eq"; break;
+      case ">": comparator = "gt"; break;
+      case "<": comparator = "lt"; break;
+      case ">=": comparator = "gte"; break;
+      case "<=": comparator = "lte"; break;
+    }
+
+    try {
+      value = JSON.parse(value);
+    } catch (error) {}
+
+    return { group, prop, comparator, value };
+  }
+
+  toLuaTableString() {
+
+    const parseLua = (value) => {
+      if (value === null) return null;
+
+      if (Array.isArray(value)) {
+        const elements = value.map(parseLua).join(", ");
+        return `{${elements}}`;
+      }
+
+      const valueType = typeof value;
+
+      if (valueType == "number" || valueType == "boolean")
+        return value.toString();
+
+      if (valueType == "string")
+        return JSON.stringify(value);
+
+      if (valueType == "object") {
+        const properties = Object.entries(value)
+          .map(([key, val]) => `${key} = ${parseLua(val)}`)
+          .join(", ");
+        return `{${properties}}`;
+      }
+
+      throw new Error(`Unsupported data type: ${valueType}`);
+    };
+
+    const data = this.toJSON();
+    return `return ${parseLua(data)}`;
+  }
+
+  attrsToObject(node) {
+    return Object
+      .entries(node)
+      .reduce((acc, [key, value]) => ({
+        ...acc,
+        [value.name]: value.value
+      }), {})
+  }
+
+  decodeHTMLEntities(text) {
+    var textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
+  }
+}
+
+const parseTwineToLua = () => {
+  const twStorydata = document.getElementsByTagName("tw-storydata")[0];
+  const parser = new Parser(twStorydata);
+  document.getElementById("output").innerHTML = parser.toLuaTableString()
+};
+
+window.parseTwineToLua = parseTwineToLua;
+
   </script>
   <style>
     body,
@@ -71,22 +270,11 @@
   <button onclick="copyText(this)">Copy output</button>
   <pre id="output"></pre>
   <div id="storyData">
-    <tw-storydata name="Untitled Story" startnode="3" creator="Twine" creator-version="2.8.1" format="Twine to Lua parser" format-version="0.0.16" ifid="D0233F97-E9DA-43A8-AE3B-D1ED8807F4F9" options="" tags="" zoom="1" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript"></script><tw-passagedata pid="1" name="N1" tags="" position="600,400" size="100,100">tN1</tw-passagedata><tw-passagedata pid="2" name="N2" tags="" position="1000,325" size="100,100">tN2
-$variable = value
-?(qwer.asdf &lt; &#39;zxcv&#39;)
-* one
-** one
-*** one
-0. one
-0.0. one
-0.0.0. one
-{{emotion}}
-[[Conditional Label?(qwer.asdf &lt; &#39;zxcv&#39;)|N6]]
-//[[Option Label -&gt; N3]]//
-//[[Option Label 2 | N4]]//
-[[---Hey!|PassageNameNoSpaces]]</tw-passagedata><tw-passagedata pid="3" name="n0" tags="" position="800,200" size="100,100">tN0
-oN1 [[N1]]
-oN1 [[N2]]</tw-passagedata><tw-passagedata pid="4" name=" N3" tags="" position="1050,525" size="100,100"></tw-passagedata><tw-passagedata pid="5" name=" N4" tags="" position="1200,525" size="100,100"></tw-passagedata><tw-passagedata pid="6" name="PassageNameNoSpaces" tags="" position="875,525" size="100,100"></tw-passagedata><tw-passagedata pid="7" name="N6" tags="" position="1350,525" size="100,100"></tw-passagedata></tw-storydata>
+    <tw-storydata name="NPC-Kid" startnode="1" creator="Twine" creator-version="2.8.1" format="Twine to Lua parser" format-version="0.0.16" ifid="B276BBF9-D6C9-498B-8CAC-05D6AF2A5E6E" options="" tags="" zoom="1" hidden=""><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript"></script><tw-passagedata pid="1" name="Start" tags="" position="1500,525" size="100,100">?(inventory.bug == true)[[StartHasBeetle]]
+?(inventory.bug == false)[[StartHasNoBeetle]]</tw-passagedata><tw-passagedata pid="2" name="StartHasBeetle" tags="" position="1500,650" size="100,100">Hey where'd you get that beetle?
+Can I see it? I lost mine.
+[[You shouldn't talk to strangers | exit]]</tw-passagedata><tw-passagedata pid="3" name="StartHasNoBeetle" tags="" position="1625,650" size="100,100">Sorry I don't talk to strangers
+[[ok bye | exit]]</tw-passagedata><tw-passagedata pid="4" name=" exit" tags="" position="1625,775" size="100,100">$exit = true</tw-passagedata></tw-storydata>
   </div>
   <script>
     function copyText() {
