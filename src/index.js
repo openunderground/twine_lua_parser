@@ -2,7 +2,7 @@ const RegEx = {
   EXTRACT_PROPS: /\$(?:(\w+)\.)?(\w+)\s*=\s*("[^"]+"|'[^']+'|\b\w+\b|\d+)/,
   EXTRACT_CONDITION: /\?\((?:(\w+)\.)?(\w+)\s*(==|<|>)\s*["']?([^"'\s]+)["']?\)/,
   EXTRACT_EMOTION: /\{\{([\w, +]+)\}\}/,
-  IS_LINK: /^!*\[\[.+?\]\]!*$/g,
+  IS_LINK: /!*\[\[.+?\]\]!*$/g,
   DOUBLE_SQUARE_BRACKETS: /^!*\[\[|\]\]!*$/g,
 }
 
