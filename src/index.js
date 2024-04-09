@@ -145,7 +145,7 @@ class Parser {
   toLuaTableString() {
 
     const parseLua = (value) => {
-      if (value === null) return null;
+      if (value === null) return "nil";
 
       if (Array.isArray(value)) {
         const elements = value.map(parseLua).join(", ");

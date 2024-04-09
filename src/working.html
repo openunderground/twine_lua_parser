@@ -4,11 +4,11 @@
 <head>
   <title>Untitled Story</title>
   <script type="text/javascript">
-    const RegEx = {
+  const RegEx = {
   EXTRACT_PROPS: /\$(?:(\w+)\.)?(\w+)\s*=\s*("[^"]+"|'[^']+'|\b\w+\b|\d+)/,
   EXTRACT_CONDITION: /\?\((?:(\w+)\.)?(\w+)\s*(==|<|>)\s*["']?([^"'\s]+)["']?\)/,
   EXTRACT_EMOTION: /\{\{([\w, +]+)\}\}/,
-  IS_LINK: /^!*\[\[.+?\]\]!*$/g,
+  IS_LINK: /!*\[\[.+?\]\]!*$/g,
   DOUBLE_SQUARE_BRACKETS: /^!*\[\[|\]\]!*$/g,
 }
 
@@ -151,7 +151,7 @@ class Parser {
   toLuaTableString() {
 
     const parseLua = (value) => {
-      if (value === null) return null;
+      if (value === null) return "nil";
 
       if (Array.isArray(value)) {
         const elements = value.map(parseLua).join(", ");
@@ -203,6 +203,7 @@ const parseTwineToLua = () => {
 };
 
 window.parseTwineToLua = parseTwineToLua;
+
 
   </script>
   <style>
@@ -270,11 +271,11 @@ window.parseTwineToLua = parseTwineToLua;
   <button onclick="copyText(this)">Copy output</button>
   <pre id="output"></pre>
   <div id="storyData">
-    <tw-storydata name="NPC-Kid" startnode="1" creator="Twine" creator-version="2.8.1" format="Twine to Lua parser" format-version="0.0.16" ifid="B276BBF9-D6C9-498B-8CAC-05D6AF2A5E6E" options="" tags="" zoom="1" hidden=""><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript"></script><tw-passagedata pid="1" name="Start" tags="" position="1500,525" size="100,100">?(inventory.bug == true)[[StartHasBeetle]]
-?(inventory.bug == false)[[StartHasNoBeetle]]</tw-passagedata><tw-passagedata pid="2" name="StartHasBeetle" tags="" position="1500,650" size="100,100">Hey where'd you get that beetle?
+    <tw-storydata name="NPC-Kid" startnode="1" creator="Twine" creator-version="2.8.1" format="Twine to Lua parser" format-version="0.0.16" ifid="B276BBF9-D6C9-498B-8CAC-05D6AF2A5E6E" options="" tags="" zoom="1" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css"></style><script role="script" id="twine-user-script" type="text/twine-javascript"></script><tw-passagedata pid="1" name="Start" tags="" position="1500,525" size="100,100">?(inventory.bug == true)[[StartHasBeetle]]
+?(inventory.bug == false)[[StartHasNoBeetle]]</tw-passagedata><tw-passagedata pid="2" name="StartHasBeetle" tags="" position="1500,650" size="100,100">Hey where&#39;d you get that beetle?
 Can I see it? I lost mine.
-[[You shouldn't talk to strangers | exit]]</tw-passagedata><tw-passagedata pid="3" name="StartHasNoBeetle" tags="" position="1625,650" size="100,100">Sorry I don't talk to strangers
-[[ok bye | exit]]</tw-passagedata><tw-passagedata pid="4" name=" exit" tags="" position="1625,775" size="100,100">$exit = true</tw-passagedata></tw-storydata>
+[[You shouldn&#39;t talk to strangers |exit]]</tw-passagedata><tw-passagedata pid="3" name="StartHasNoBeetle" tags="" position="1625,650" size="100,100">Sorry I don&#39;t talk to strangers
+[[ok bye |exit]]</tw-passagedata><tw-passagedata pid="4" name="exit" tags="" position="1625,775" size="100,100">$exit = true</tw-passagedata></tw-storydata>
   </div>
   <script>
     function copyText() {
